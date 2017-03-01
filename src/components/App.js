@@ -27,9 +27,12 @@ class App extends React.Component {
     /**
      * Public functions.
      */
-    this.addFish      = this.addFish.bind(this);
-    this.loadSamples  = this.loadSamples.bind(this);
-    this.addToOrder   = this.addToOrder.bind(this);
+    this.addFish          = this.addFish.bind(this);
+    this.removeFish       = this.removeFish.bind(this);
+    this.updateFish       = this.updateFish.bind(this);
+    this.loadSamples      = this.loadSamples.bind(this);
+    this.addToOrder       = this.addToOrder.bind(this);
+    this.removeFromOrder  = this.removeFromOrder.bind(this);
 
     /**
      * Sets the component initial state object.
@@ -61,6 +64,22 @@ class App extends React.Component {
     this.setState({ fishes: fishes});
   }
 
+  removeFish(key) {
+    const fishes  = {...this.state.fishes};
+    fishes[key]   = null; /* firebase need things to be equals null in order to get deleted. */
+
+    this.setState({ fishes });
+  }
+
+  /**
+   * Used by the "Inventory" component.
+   */
+  updateFish(key, updatedFish) {
+    const fishes  = {...this.state.fishes};
+    fishes[key]   = updatedFish;
+    this.setState({ fishes });
+  }
+
   loadSamples() {
     this.setState({
       fishes: sampleFishes
@@ -83,6 +102,18 @@ class App extends React.Component {
      * Updates the state.
      */
     this.setState({ order: order });
+  }
+
+  removeFromOrder(key) {
+    const order = {...this.state.order};
+
+    /**
+     * We just need to remove from the state, because since the `componentWillUpdate` method
+     * will be fired when the state changes, by removing from the state, it will also remove it
+     * from the local storage.
+     */
+    delete order[key];
+    this.setState({ order });
   }
 
   /**
@@ -129,8 +160,15 @@ class App extends React.Component {
         <Order
           fishes={this.state.fishes}
           order={this.state.order}
+          removeFromOrder={this.removeFromOrder}
           />
-        <Inventory addFish={this.addFish} loadSamples={this.loadSamples}/>
+        <Inventory
+          addFish={this.addFish}
+          updateFish={this.updateFish}
+          removeFish={this.removeFish}
+          fishes={this.state.fishes}
+          loadSamples={this.loadSamples}
+          />
       </div>
     );
   }
@@ -159,6 +197,23 @@ class App extends React.Component {
     };
 
     this.ref = base.syncState(databaseSchema, config);
+
+    /**
+     * Sync the state 'order' within the related local storage data if it exists.
+     */
+    const storage = {
+      key: `order-${storeId}`
+    };
+    const order = localStorage.getItem(storage.key);
+
+    if (order) {
+      /**
+       * Updates the component 'order' state with the data obtained from the local storage.
+       */
+      this.setState({
+        order: JSON.parse(order)
+      });
+    }
   }
 
   /**
@@ -170,6 +225,24 @@ class App extends React.Component {
    */
   componentWillUnmount() {
     base.removeBinding(this.ref);
+  }
+
+  /**
+   * @ Component lyfe cycle events
+   *
+   * NOTE:
+   * 1. This event will be fired everytime the 'props' and 'state' attributes of this component gets changed.
+   * 2. We use it, at every 'order' change, we put it on the local storage to bind it again on page refresh.
+   */
+  componentWillUpdate(nextProps, nextState) {
+    const storeId   = this.props.params.storeId;
+    const order     = JSON.stringify(nextState.order);
+
+    const storage   = {
+      key: `order-${storeId}`,
+      value: order
+    };
+    localStorage.setItem(storage.key, storage.value);
   }
 }
 

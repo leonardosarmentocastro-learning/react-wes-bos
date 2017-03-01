@@ -18,13 +18,20 @@ class Order extends React.Component {
   }
 
   renderOrder(key) {
-    const fish    = this.props.fishes[key];
-    const count   = this.props.order[key];
+    const fish          = this.props.fishes[key];
+    const count         = this.props.order[key];
+    const removeButton  =
+      <button onClick={() => this.props.removeFromOrder(key)}>
+        &times;
+      </button>
 
     if (!fish || fish.status === 'unavailable') {
       const text      = `Sorry, ${fish ? fish.name : 'fish'} is no longer available!`;
       const template  =
-        <li key={key}>{text}</li>;
+        <li key={key}>
+          {text}
+          {removeButton}
+        </li>;
 
       return (template);
     }
@@ -32,7 +39,7 @@ class Order extends React.Component {
     const totalForThatFish  = formatPrice(count * fish.price);
     const template          =
       <li key={key}>
-        <span>{count} lbs - {fish.name}</span>
+        <span>{count} lbs - {fish.name} {removeButton}</span>
         <span className='price'>
           {totalForThatFish}
         </span>
